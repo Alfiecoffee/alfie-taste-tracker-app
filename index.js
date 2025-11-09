@@ -10,6 +10,29 @@ const ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
 
 app.use(express.json());
 
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    "https://alfiecoffee.co.uk",
+    "https://alfiecoffee.myshopify.com"
+  ];
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Credentials", "false");
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
+
 // Helper to talk to Shopify Admin GraphQL API
 async function shopifyGraphQL(query, variables = {}) {
   const res = await fetch(`https://${SHOP}/admin/api/2024-04/graphql.json`, {
