@@ -34,6 +34,7 @@ app.use((req, res, next) => {
 
 
 // Helper to talk to Shopify Admin GraphQL API
+// Helper to talk to Shopify Admin GraphQL API
 async function shopifyGraphQL(query, variables = {}) {
   const res = await fetch(`https://${SHOP}/admin/api/2024-04/graphql.json`, {
     method: "POST",
@@ -46,13 +47,23 @@ async function shopifyGraphQL(query, variables = {}) {
 
   const json = await res.json();
 
-  if (json.errors) {
-    console.error("GraphQL errors:", json.errors);
-    throw new Error("Shopify GraphQL error");
+  // If HTTP itself failed (bad token, bad shop, etc.)
+  if (!res.ok) {
+    console.error("HTTP error from Shopify:", res.status, json);
+    throw new Error(`HTTP ${res.status} from Shopify`);
+  }
+
+  // If GraphQL returned errors
+  if (json.errors && json.errors.length) {
+    console.error("GraphQL errors:", JSON.stringify(json.errors, null, 2));
+    // Use the first error message if there is one
+    const msg = json.errors[0]?.message || "Shopify GraphQL error";
+    throw new Error(msg);
   }
 
   return json.data;
 }
+
 
 // Get existing passport metafield for a customer
 async function getPassport(customerId) {
