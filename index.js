@@ -165,11 +165,15 @@ app.post("/save", async (req, res) => {
     await savePassport(customer_id, passport);
 
     res.json({ ok: true });
-  } catch (e) {
+    } catch (e) {
     console.error("Error in /save:", e);
-    res.status(500).json({ ok: false, error: "Server error" });
+    res.status(500).json({
+      ok: false,
+      error: e.message || "Server error"
+    });
   }
 });
+
 
 // Simple health check route
 app.get("/", (req, res) => {
