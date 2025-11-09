@@ -4,13 +4,13 @@ const express = require("express");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// These come from environment variables on Render
+// Environment variables set in Render
 const SHOP = process.env.SHOPIFY_SHOP_DOMAIN;     // e.g. "alfiecoffee.myshopify.com"
 const ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
 
 app.use(express.json());
 
-// CORS for your Shopify storefront
+// Allow requests from your live site + Shopify domain
 app.use((req, res, next) => {
   const allowedOrigins = [
     "https://alfiecoffee.co.uk",
@@ -33,9 +33,12 @@ app.use((req, res, next) => {
   next();
 });
 
+
+// ------------------------------
 // Helper to talk to Shopify Admin GraphQL API
+// ------------------------------
 async function shopifyGraphQL(query, variables = {}) {
-  const url = `https://${SHOP}/admin/api/2024-04/graphql.json`;
+  const url = `https://${SHOP}/admin/api/2025-01/graphql.json`;
   console.log("Shopify GraphQL URL:", url);
 
   const res = await fetch(url, {
@@ -47,9 +50,10 @@ async function shopifyGraphQL(query, variables = {}) {
     body: JSON.stringify({ query, variables })
   });
 
+  // Only one declaration of json here
   const json = await res.json();
 
-  // HTTP-level error (wrong shop, wrong token, bad URL, etc.)
+  // HTTP-level error (bad domain, token, or version)
   if (!res.ok) {
     console.error("HTTP error from Shopify:", res.status, json);
     throw new Error(`HTTP ${res.status} from Shopify`);
@@ -65,7 +69,10 @@ async function shopifyGraphQL(query, variables = {}) {
   return json.data;
 }
 
-// Get existing passport metafield for a customer
+
+// ------------------------------
+// Get existing passport metafield
+// ------------------------------
 async function getPassport(customerId) {
   const gid = `gid://shopify/Customer/${customerId}`;
 
@@ -94,7 +101,10 @@ async function getPassport(customerId) {
   }
 }
 
-// Save updated passport metafield for a customer
+
+// ------------------------------
+// Save updated passport metafield
+// ------------------------------
 async function savePassport(customerId, passport) {
   const gid = `gid://shopify/Customer/${customerId}`;
 
@@ -131,7 +141,10 @@ async function savePassport(customerId, passport) {
   }
 }
 
-// Main endpoint: called by your Passport page
+
+// ------------------------------
+// Main endpoint (called from your Passport page)
+// ------------------------------
 app.post("/save", async (req, res) => {
   try {
     const {
@@ -151,10 +164,10 @@ app.post("/save", async (req, res) => {
       });
     }
 
-    // Load existing passport (all roasts) for this customer
+    // Load existing passport
     const passport = await getPassport(customer_id);
 
-    // Update this roast entry
+    // Update the roast entry
     passport[roast_handle] = {
       ...(passport[roast_handle] || {}),
       rating: Number(rating) || 0,
@@ -177,7 +190,10 @@ app.post("/save", async (req, res) => {
   }
 });
 
-// Simple health check route
+
+// ------------------------------
+// Health check route
+// ------------------------------
 app.get("/", (req, res) => {
   res.send("Alfie Taste Tracker app is running.");
 });
