@@ -1,15 +1,15 @@
 {
   "name": "alfie-taste-tracker-app",
   "version": "1.0.0",
-  "description": "",
+  "description": "Alfie & Co Taste Tracker passport app",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "express": "^5.1.0"
   }
