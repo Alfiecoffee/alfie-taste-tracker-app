@@ -10,6 +10,7 @@ const ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
 
 app.use(express.json());
 
+// CORS for your Shopify storefront
 app.use((req, res, next) => {
   const allowedOrigins = [
     "https://alfiecoffee.co.uk",
@@ -32,8 +33,6 @@ app.use((req, res, next) => {
   next();
 });
 
-
-// Helper to talk to Shopify Admin GraphQL API
 // Helper to talk to Shopify Admin GraphQL API
 async function shopifyGraphQL(query, variables = {}) {
   const url = `https://${SHOP}/admin/api/2024-04/graphql.json`;
@@ -49,28 +48,22 @@ async function shopifyGraphQL(query, variables = {}) {
   });
 
   const json = await res.json();
-  // ... leave the rest as we already have it ...
 
-
-  const json = await res.json();
-
-  // If HTTP itself failed (bad token, bad shop, etc.)
+  // HTTP-level error (wrong shop, wrong token, bad URL, etc.)
   if (!res.ok) {
     console.error("HTTP error from Shopify:", res.status, json);
     throw new Error(`HTTP ${res.status} from Shopify`);
   }
 
-  // If GraphQL returned errors
+  // GraphQL-level errors
   if (json.errors && json.errors.length) {
     console.error("GraphQL errors:", JSON.stringify(json.errors, null, 2));
-    // Use the first error message if there is one
     const msg = json.errors[0]?.message || "Shopify GraphQL error";
     throw new Error(msg);
   }
 
   return json.data;
 }
-
 
 // Get existing passport metafield for a customer
 async function getPassport(customerId) {
@@ -152,7 +145,10 @@ app.post("/save", async (req, res) => {
     } = req.body;
 
     if (!customer_id || !roast_handle) {
-      return res.status(400).json({ ok: false, error: "Missing customer_id or roast_handle" });
+      return res.status(400).json({
+        ok: false,
+        error: "Missing customer_id or roast_handle"
+      });
     }
 
     // Load existing passport (all roasts) for this customer
@@ -172,7 +168,7 @@ app.post("/save", async (req, res) => {
     await savePassport(customer_id, passport);
 
     res.json({ ok: true });
-    } catch (e) {
+  } catch (e) {
     console.error("Error in /save:", e);
     res.status(500).json({
       ok: false,
@@ -180,7 +176,6 @@ app.post("/save", async (req, res) => {
     });
   }
 });
-
 
 // Simple health check route
 app.get("/", (req, res) => {
