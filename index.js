@@ -5,7 +5,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Environment variables set in Render
-const SHOP = process.env.SHOPIFY_SHOP_DOMAIN;     // e.g. "alfiecoffee.myshopify.com"
+const SHOP = process.env.SHOPIFY_SHOP_DOMAIN;     // e.g. "www-alfiecoffee-co-uk.myshopify.com"
 const ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
 
 app.use(express.json());
@@ -50,7 +50,6 @@ async function shopifyGraphQL(query, variables = {}) {
     body: JSON.stringify({ query, variables })
   });
 
-  // Only one declaration of json here
   const json = await res.json();
 
   // HTTP-level error (bad domain, token, or version)
@@ -143,6 +142,38 @@ async function savePassport(customerId, passport) {
 
 
 // ------------------------------
+// Helpers for roast data shape
+// ------------------------------
+function normaliseRoast(rawRoast) {
+  if (!rawRoast) {
+    return { entries: [] };
+  }
+
+  // Already in new format
+  if (Array.isArray(rawRoast.entries)) {
+    return { entries: rawRoast.entries.slice() };
+  }
+
+  // Legacy single-entry format => wrap into entries[0]
+  const now = new Date().toISOString();
+  const entry = {
+    id: rawRoast.id || now,
+    created_at: rawRoast.created_at || now,
+    updated_at: rawRoast.updated_at || rawRoast.created_at || now,
+    brew_method: rawRoast.brew_method || "",
+    grinding_from_whole_bean: Boolean(rawRoast.grinding_from_whole_bean),
+    grind_notes: rawRoast.grind_notes || "",
+    brew_recipe: rawRoast.brew_recipe || "",
+    rating: Number(rawRoast.rating || 0),
+    notes: rawRoast.notes || "",
+    outcome: rawRoast.outcome || ""
+  };
+
+  return { entries: [entry] };
+}
+
+
+// ------------------------------
 // Main endpoint (called from your Passport page)
 // ------------------------------
 app.post("/save", async (req, res) => {
@@ -150,11 +181,15 @@ app.post("/save", async (req, res) => {
     const {
       customer_id,
       roast_handle,
+      entry_id,
+      action,
       rating,
       brew_method,
       grinding_from_whole_bean,
       grind_notes,
-      notes
+      brew_recipe,
+      notes,
+      outcome
     } = req.body;
 
     if (!customer_id || !roast_handle) {
@@ -164,23 +199,98 @@ app.post("/save", async (req, res) => {
       });
     }
 
-    // Load existing passport
     const passport = await getPassport(customer_id);
+    const roast = normaliseRoast(passport[roast_handle]);
 
-    // Update the roast entry
-    passport[roast_handle] = {
-      ...(passport[roast_handle] || {}),
-      rating: Number(rating) || 0,
-      brew_method: brew_method || "",
-      grinding_from_whole_bean: Boolean(grinding_from_whole_bean),
-      grind_notes: grind_notes || "",
-      notes: notes || ""
-    };
+    const now = new Date().toISOString();
 
-    // Save back to Shopify
+    // Find existing entry if entry_id given
+    let existingIndex = -1;
+    let existingEntry = null;
+    if (entry_id) {
+      existingIndex = roast.entries.findIndex(e => e.id === entry_id);
+      if (existingIndex !== -1) {
+        existingEntry = roast.entries[existingIndex];
+      }
+    }
+
+    // --- RESET CURRENT TASTING (clear fields, keep entry + timestamps) ---
+    if (action === "reset") {
+      if (!existingEntry) {
+        // Nothing to reset (unsaved or id not found)
+        return res.json({ ok: true, reset: true });
+      }
+
+      const cleared = {
+        ...existingEntry,
+        brew_method: "",
+        grinding_from_whole_bean: false,
+        grind_notes: "",
+        brew_recipe: "",
+        rating: 0,
+        notes: "",
+        outcome: "",
+        updated_at: now
+      };
+
+      roast.entries[existingIndex] = cleared;
+      passport[roast_handle] = roast;
+
+      await savePassport(customer_id, passport);
+
+      return res.json({
+        ok: true,
+        reset: true,
+        entry: cleared
+      });
+    }
+
+    // --- SAVE / UPDATE TASTING ---
+    let finalEntryId = entry_id;
+
+    if (existingEntry) {
+      // Update existing entry
+      const updated = {
+        ...existingEntry,
+        brew_method: brew_method || "",
+        grinding_from_whole_bean: Boolean(grinding_from_whole_bean),
+        grind_notes: grind_notes || "",
+        brew_recipe: brew_recipe || "",
+        rating: Number(rating || 0),
+        notes: notes || "",
+        outcome: outcome || "",
+        updated_at: now
+      };
+
+      roast.entries[existingIndex] = updated;
+      finalEntryId = updated.id;
+    } else {
+      // Create new entry
+      const newId = entry_id || now; // front end can send id; if not, use timestamp
+      const entry = {
+        id: newId,
+        created_at: now,
+        updated_at: now,
+        brew_method: brew_method || "",
+        grinding_from_whole_bean: Boolean(grinding_from_whole_bean),
+        grind_notes: grind_notes || "",
+        brew_recipe: brew_recipe || "",
+        rating: Number(rating || 0),
+        notes: notes || "",
+        outcome: outcome || ""
+      };
+
+      roast.entries.push(entry);
+      finalEntryId = entry.id;
+    }
+
+    passport[roast_handle] = roast;
     await savePassport(customer_id, passport);
 
-    res.json({ ok: true });
+    res.json({
+      ok: true,
+      entry_id: finalEntryId
+    });
   } catch (e) {
     console.error("Error in /save:", e);
     res.status(500).json({
