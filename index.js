@@ -36,7 +36,10 @@ app.use((req, res, next) => {
 // Helper to talk to Shopify Admin GraphQL API
 // Helper to talk to Shopify Admin GraphQL API
 async function shopifyGraphQL(query, variables = {}) {
-  const res = await fetch(`https://${SHOP}/admin/api/2024-04/graphql.json`, {
+  const url = `https://${SHOP}/admin/api/2024-04/graphql.json`;
+  console.log("Shopify GraphQL URL:", url);
+
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       "X-Shopify-Access-Token": ADMIN_TOKEN,
@@ -44,6 +47,10 @@ async function shopifyGraphQL(query, variables = {}) {
     },
     body: JSON.stringify({ query, variables })
   });
+
+  const json = await res.json();
+  // ... leave the rest as we already have it ...
+
 
   const json = await res.json();
 
