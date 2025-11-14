@@ -1,0 +1,18 @@
+# This file defines the app's configuration and extensions
+
+name = "Alfie Taste Tracker"
+client_id = "[YOUR APP CLIENT ID HERE]" 
+application_url = "https://alfie-taste-tracker-app.onrender.com"
+redirect_url = "[YOUR EXISTING REDIRECT URL HERE]" 
+
+[access_scopes]
+scopes = "write_customers, read_customers, read_app_proxy, write_app_proxy"
+
+# ==============================
+# APP PROXY EXTENSION DEFINITION
+# ==============================
+[[app_proxy.url_support]]
+  path = "/passport-data"
+  prefix = "apps"
+  subpath = "alfie-tracker"
+  target = "https://alfie-taste-tracker-app.onrender.com"
