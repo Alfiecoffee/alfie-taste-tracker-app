@@ -304,7 +304,37 @@ app.post("/save", async (req, res) => {
     });
   }
 });
+// ------------------------------
+// NEW APP PROXY READ ENDPOINT
+// This endpoint is hit when the customer loads the Coffee Journal page.
+// The data is currently pulled directly from the customer metafield.
+// ------------------------------
+app.get("/passport-data", async (req, res) => {
+  try {
+    // Shopify App Proxy often passes the customer ID via URL query parameters
+    // We extract the customer ID from the parameters
+    const customerId = req.query.customer_id;
 
+    if (!customerId) {
+      return res.status(400).json({
+        ok: false,
+        error: "Missing customer_id parameter"
+      });
+    }
+
+    // Use the existing function to pull data from the customer metafield
+    const passportData = await getPassport(customerId);
+
+    // Respond with the raw JSON data. Shopify handles proxy formatting.
+    res.json(passportData);
+  } catch (e) {
+    console.error("Error in /passport-data:", e);
+    res.status(500).json({
+      ok: false,
+      error: e.message || "Server error"
+    });
+  }
+});
 
 // ------------------------------
 // Health check route
