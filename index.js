@@ -237,7 +237,7 @@ function normaliseRoast(rawRoast) {
 // ------------------------------
 // App Proxy Read Endpoint (App Proxy GET /apps/alfie-tracker/passport-data)
 // ------------------------------
-app.get("/passport-data", async (req, res) => {
+app.get("/apps/alfie-tracker/passport-data", async (req, res) => {
     try {
         const customerId = req.query.customer_id;
 
