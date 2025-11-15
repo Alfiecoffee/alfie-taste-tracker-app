@@ -12,6 +12,6 @@
   "license": "ISC",
   "dependencies": {
     "express": "^5.1.0",
-    "mongodb": "^6.7.0"  // <-- ADD THIS LINE
+    "mongodb": "^6.7.0" 
   }
 }
