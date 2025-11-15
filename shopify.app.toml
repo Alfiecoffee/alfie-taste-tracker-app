@@ -1,18 +1,34 @@
-# This file defines the app's configuration and extensions
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-name = "Alfie Taste Tracker"
-client_id = "[YOUR APP CLIENT ID HERE]" 
+client_id = "efb79172d9f6db9d24a94c4b47116d5d"
+name = "My Coffee Journal"
 application_url = "https://alfie-taste-tracker-app.onrender.com"
-redirect_url = "[YOUR EXISTING REDIRECT URL HERE]" 
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+# Note: include_config_on_deploy is no longer supported and can be removed 
+# or left as is, but we will rely on the deploy command to push config.
+
+[webhooks]
+api_version = "2026-01"
 
 [access_scopes]
+# CRITICAL: Added customer and app_proxy scopes
 scopes = "write_customers, read_customers, read_app_proxy, write_app_proxy"
+
+[auth]
+# CRITICAL: Updated redirect URL to your Render deployment
+redirect_urls = [ "https://alfie-taste-tracker-app.onrender.com/auth/callback" ]
 
 # ==============================
 # APP PROXY EXTENSION DEFINITION
+# This is the block that activates the feature in the Partner Dashboard
 # ==============================
-[[app_proxy.url_support]]
-  path = "/passport-data"
-  prefix = "apps"
+# ==============================
+# APP PROXY EXTENSION DEFINITION (SIMPLIFIED)
+# ==============================
+[app_proxy]
+  url = "https://alfie-taste-tracker-app.onrender.com/passport-data"
   subpath = "alfie-tracker"
-  target = "https://alfie-taste-tracker-app.onrender.com"
+  prefix = "apps"
