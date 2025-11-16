@@ -374,7 +374,88 @@ app.post("/save", async (req, res) => {
     }
 });
 
+// ------------------------------
+// NEW: Homepage Journal Summary Endpoint
+// (GET /journal-summary)
+// ------------------------------
+app.get("/journal-summary", async (req, res) => {
+    try {
+        const customerId = req.query.customer_id;
 
+        if (!customerId) {
+            return res.status(400).json({ ok: false, error: "Missing customer_id" });
+        }
+
+        // 1. Get the customer's entire journal from MongoDB
+        const passport = await getPassport(customerId, false); // false = don't migrate
+        
+        if (!passport || Object.keys(passport).length === 0) {
+            // No data, return empty stats
+            return res.json({
+                totalBrews: 0,
+                roastsUnlocked: 0,
+                mostBrewedHandle: null,
+                favouriteMethod: null
+            });
+        }
+
+        let totalBrews = 0;
+        let mostBrewedHandle = null;
+        let maxBrews = 0;
+        const methodCounts = {};
+        const roastHandles = Object.keys(passport);
+
+        // 2. Loop through all roasts in the journal
+        for (const handle of roastHandles) {
+            const roast = normaliseRoast(passport[handle]);
+            const brewCount = roast.entries.length;
+            
+            if (brewCount > 0) {
+                // Add to total
+                totalBrews += brewCount;
+
+                // Check if this is the most brewed
+                if (brewCount > maxBrews) {
+                    maxBrews = brewCount;
+                    mostBrewedHandle = handle;
+                }
+                
+                // Tally brew methods
+                roast.entries.forEach(entry => {
+                    if (entry.brew_method && entry.brew_method.length > 0) {
+                        const method = entry.brew_method;
+                        methodCounts[method] = (methodCounts[method] || 0) + 1;
+                    }
+                });
+            }
+        }
+
+        // 3. Find the favourite brew method
+        let favouriteMethod = null;
+        let maxMethodCount = 0;
+        for (const method in methodCounts) {
+            if (methodCounts[method] > maxMethodCount) {
+                maxMethodCount = methodCounts[method];
+                favouriteMethod = method;
+            }
+        }
+
+        // 4. Send back the final stats
+        res.json({
+            totalBrews: totalBrews,
+            roastsUnlocked: roastHandles.length,
+            mostBrewedHandle: mostBrewedHandle,
+            favouriteMethod: favouriteMethod
+        });
+
+    } catch (e) {
+        console.error("Error in /journal-summary:", e);
+        res.status(500).json({
+            ok: false,
+            error: e.message || "Server error"
+        });
+    }
+});
 // ------------------------------
 // Health check route 
 // ------------------------------
